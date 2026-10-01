@@ -1,0 +1,11 @@
+node_modules/
+data/
+.playwright-mcp/
+.env
+admin/.env
+admin/dist/
+supabase/.temp/
+.claude/settings.local.json
+.DS_Store
+# legacy local Puppeteer/Steel test script - superseded by src/scrape.mjs
+test-scrape.mjs

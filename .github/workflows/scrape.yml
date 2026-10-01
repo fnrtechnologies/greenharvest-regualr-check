@@ -1,0 +1,49 @@
+name: Scrape
+
+on:
+  # Triggered at 06:30 UTC on the 1st by pg_cron calling dispatch_scrape() in Supabase
+  # (GitHub's own schedule: trigger can fire hours late), and by the admin portal's Retry button.
+  workflow_dispatch:
+    inputs:
+      gh_id:
+        description: "Only scrape this GH ID (blank = all enabled users)"
+        required: false
+        default: ""
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run scrape:headless
+        env:
+          GH_ID: ${{ inputs.gh_id }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ADMIN_PORTAL_URL: ${{ vars.ADMIN_PORTAL_URL }}
+
+      # Screenshot + DOM + error for each failed user; Telegram only gets the screenshot.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: failure-debug-${{ github.run_id }}
+          path: data/_failures/
+          if-no-files-found: ignore
+          retention-days: 14

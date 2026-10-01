@@ -1,0 +1,6 @@
+[functions.scrape-payouts]
+verify_jwt = false
+
+# Scheduling is handled by pg_cron (see migrations/007_scrape_queue.sql):
+#   populate-scrape-queue  30 6 1 * *       (1st of month, 12:00 PM IST)
+#   process-scrape-queue   */3 6-13 1 * *   (every 3 min on the 1st)

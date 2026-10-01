@@ -1,0 +1,16 @@
+{
+  "name": "greenharvest-regular-check",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Monthly payout scraper for greenharvest.live users. Results go to Supabase and the admin portal in admin/.",
+  "scripts": {
+    "scrape": "node src/scrape.mjs",
+    "scrape:headless": "node src/scrape.mjs --headless"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^17.2.0",
+    "playwright": "^1.55.0"
+  }
+}

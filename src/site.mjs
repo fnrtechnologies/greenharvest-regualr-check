@@ -19,13 +19,16 @@ export async function login(page, { username, password }) {
   await page.goto(`${SITE_URL}/login.html`, { waitUntil: "domcontentloaded" });
   await page.fill('input[name="userid"]', username);
   await page.fill('input[name="password"]', password);
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.endsWith("/login.html")),
-    page.click('button[type="submit"]'),
-  ]);
-  if (await page.locator('input[name="userid"]').count()) {
-    throw new Error("Login failed - still on login page");
-  }
+  // The form posts to checkuser.php, which redirects to members/mlogin.php — wait for that
+  // final page, or the next goto gets interrupted by the pending redirect.
+  await page.click('button[type="submit"]');
+  await page.waitForURL(/\/members\//).catch(async (err) => {
+    if (await page.locator('input[name="userid"]').count()) {
+      throw new Error("Login failed - still on login page");
+    }
+    throw err;
+  });
+  await page.waitForLoadState("load");
 }
 
 /** Opens a members page and returns every table row as { header: cell }. */

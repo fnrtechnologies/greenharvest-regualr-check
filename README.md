@@ -16,8 +16,8 @@ Results are stored in Supabase and shown in a React admin portal hosted on Cloud
 
 Flow per run: for each enabled user → log in → `members/payouts.php` (all payout rows) →
 `members/incomestatus.php` (total income). Each user's status is written to `scrape_queue`
-as it goes, which is what the Dashboard and Scrape Runs pages display. When no rows for the
-month are pending/processing, the Telegram summary is sent and `scrape_run_summaries` updated.
+as it goes, which is what the Dashboard and Scrape Runs pages display. Every run scrapes all
+enabled users; at the end the Telegram summary is sent and `scrape_run_summaries` updated.
 
 ---
 
@@ -45,15 +45,15 @@ SELECT vault.create_secret('<github_pat>', 'github_dispatch_token');
 ```
 
 Apply `supabase/migrations/013_github_actions_scrape.sql` — it schedules the monthly
-`dispatch-scrape` cron job and creates `dispatch_scrape(p_gh_id)`, which the admin portal's
-Retry button calls for a single user.
+`dispatch-scrape` cron job and creates `dispatch_scrape()`, which the admin portal's Retry
+button also calls (it re-runs all users).
 
 ### 3. Run manually
 
-- GitHub → Actions → **Scrape** → Run workflow (optionally enter a GH ID to scrape one user), or
-- SQL: `SELECT dispatch_scrape();` / `SELECT dispatch_scrape('GH379589');`, or
-- locally: `cp .env.example .env`, fill in the key, then `npm install && npx playwright install chromium && npm run scrape -- --gh-id GH379589`
-  (drop `--gh-id` for all users; add `--headless` to hide the browser).
+- GitHub → Actions → **Scrape** → Run workflow, or
+- SQL: `SELECT dispatch_scrape();`, or
+- locally: `cp .env.example .env`, fill in the key, then `npm install && npx playwright install chromium && npm run scrape`
+  (`npm run scrape:headless` hides the browser).
 
 ### 4. Admin portal
 

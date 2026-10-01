@@ -1,13 +1,11 @@
-// Monthly payout scrape: logs in to greenharvest.live as each enabled user, saves payouts +
-// earnings to Supabase, tracks per-user status in scrape_queue (read by the admin portal),
-// and sends one Telegram summary when the month's queue has no open rows left.
+// Monthly payout scrape: one run logs in to greenharvest.live as every enabled user in turn,
+// saves payouts + earnings to Supabase, tracks per-user status in scrape_queue (read by the
+// admin portal), and sends one Telegram summary at the end.
 //
-//   node src/scrape.mjs [--headless] [--gh-id GH123456]
-//
-// GH_ID / RUN_DATE env vars work too (used by the GitHub workflow inputs).
+//   node src/scrape.mjs [--headless]
 import path from "node:path";
 import {
-  listEnabledUsers, queueUsers, setQueueStatus, queueCounts,
+  listEnabledUsers, queueUsers, setQueueStatus,
   upsertPayouts, upsertEarnings, saveRunSummary, listUsersWithPayouts,
 } from "./db.mjs";
 import { launchBrowser, newPage, login, scrapePayouts, scrapeEarnings } from "./site.mjs";
@@ -26,19 +24,17 @@ for (const event of ["uncaughtException", "unhandledRejection"]) {
 
 const args = process.argv.slice(2);
 const headless = args.includes("--headless");
-const ghIdArg = args.includes("--gh-id") ? args[args.indexOf("--gh-id") + 1] : process.env.GH_ID;
-const ghId = ghIdArg?.trim() || null;
 
 const now = new Date();
 const monthYear = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-const runDate = process.env.RUN_DATE?.trim() || `${monthYear}-01`;
+const runDate = `${monthYear}-01`;
 
-const users = await listEnabledUsers(ghId);
+const users = await listEnabledUsers();
 if (users.length === 0) {
-  console.error(ghId ? `No enabled user with gh_id ${ghId}` : "No enabled users");
+  console.error("No enabled users");
   process.exit(1);
 }
-console.log(`Run ${runDate}: ${users.length} user(s)${ghId ? ` (gh_id ${ghId})` : ""}`);
+console.log(`Run ${runDate}: ${users.length} user(s)`);
 
 await queueUsers(runDate, users.map((u) => u.id));
 
@@ -79,17 +75,15 @@ for (const user of users) {
 
 await browser.close();
 
-const counts = await queueCounts(runDate);
-if (counts.open === 0) {
-  const notified = await sendSummary({
-    users: await listUsersWithPayouts(),
-    monthYear,
-    done: counts.done,
-    failed: counts.failed,
-    failures,
-  });
-  await saveRunSummary(runDate, { notified, done: counts.done, failed: counts.failed });
-  console.log(`\nQueue complete: ${counts.done} done, ${counts.failed} failed. Telegram ${notified ? "sent" : "NOT sent"}.`);
-}
+const done = users.length - failures.length;
+const notified = await sendSummary({
+  users: await listUsersWithPayouts(),
+  monthYear,
+  done,
+  failed: failures.length,
+  failures,
+});
+await saveRunSummary(runDate, { notified, done, failed: failures.length });
+console.log(`\nRun complete: ${done} done, ${failures.length} failed. Telegram ${notified ? "sent" : "NOT sent"}.`);
 
 if (failures.length > 0) process.exit(1);

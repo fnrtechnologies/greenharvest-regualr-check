@@ -3,12 +3,8 @@ name: Scrape
 on:
   # Triggered at 06:30 UTC on the 1st by pg_cron calling dispatch_scrape() in Supabase
   # (GitHub's own schedule: trigger can fire hours late), and by the admin portal's Retry button.
-  workflow_dispatch:
-    inputs:
-      gh_id:
-        description: "Only scrape this GH ID (blank = all enabled users)"
-        required: false
-        default: ""
+  # Every run scrapes all enabled users.
+  workflow_dispatch: {}
 
 concurrency:
   group: scrape
@@ -32,7 +28,6 @@ jobs:
 
       - run: npm run scrape:headless
         env:
-          GH_ID: ${{ inputs.gh_id }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

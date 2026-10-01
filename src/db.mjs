@@ -16,14 +16,13 @@ function check(label, { data, error }) {
   return data;
 }
 
-export async function listEnabledUsers(ghId) {
-  let query = supabase
+export async function listEnabledUsers() {
+  const query = supabase
     .from("users")
     .select("id, gh_id, name, username, password")
     .eq("enabled", true)
     .order("order_no", { ascending: true, nullsFirst: false })
     .order("name");
-  if (ghId) query = query.eq("gh_id", ghId);
   return check("listEnabledUsers", await query);
 }
 
@@ -40,15 +39,6 @@ export async function setQueueStatus(runDate, userId, fields) {
     `setQueueStatus(${userId})`,
     await supabase.from("scrape_queue").update(fields).eq("run_date", runDate).eq("user_id", userId)
   );
-}
-
-export async function queueCounts(runDate) {
-  const rows = check(
-    "queueCounts",
-    await supabase.from("scrape_queue").select("status").eq("run_date", runDate)
-  );
-  const count = (s) => rows.filter((r) => r.status === s).length;
-  return { done: count("done"), failed: count("failed"), open: count("pending") + count("processing") };
 }
 
 export async function upsertPayouts(userId, rows) {

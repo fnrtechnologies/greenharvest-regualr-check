@@ -11,8 +11,8 @@ SELECT cron.unschedule('process-scrape-queue');
 DROP FUNCTION IF EXISTS populate_scrape_queue();
 DROP FUNCTION IF EXISTS process_scrape_queue();
 
--- Triggers the Scrape workflow; p_gh_id limits the run to one user (admin Retry button).
-CREATE OR REPLACE FUNCTION public.dispatch_scrape(p_gh_id text DEFAULT NULL)
+-- Triggers the Scrape workflow, which scrapes all enabled users (cron + admin Retry button).
+CREATE OR REPLACE FUNCTION public.dispatch_scrape()
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_token text;
@@ -33,18 +33,15 @@ BEGIN
       'User-Agent',           'greenharvest-dispatch',
       'Content-Type',         'application/json'
     ),
-    body    := jsonb_build_object(
-      'ref',    'main',
-      'inputs', jsonb_build_object('gh_id', coalesce(p_gh_id, ''))
-    )
+    body    := jsonb_build_object('ref', 'main')
   ) INTO v_request_id;
 
   RETURN v_request_id;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.dispatch_scrape(text) FROM public, anon;
-GRANT EXECUTE ON FUNCTION public.dispatch_scrape(text) TO authenticated;
+REVOKE ALL ON FUNCTION public.dispatch_scrape() FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.dispatch_scrape() TO authenticated;
 
 -- 1st of every month at 12:00 PM IST (06:30 UTC)
 SELECT cron.schedule('dispatch-scrape', '30 6 1 * *', 'SELECT public.dispatch_scrape()');

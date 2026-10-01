@@ -126,15 +126,9 @@ function ScrapeBadge({ user, runDate, onRefresh }: { user: UserRow; runDate?: st
   async function retry() {
     setRetrying(true);
     try {
-      // Starts the GitHub Actions scrape for this user; the workflow updates the queue row itself.
-      const { error } = await supabase.rpc("dispatch_scrape", { p_gh_id: user.gh_id });
+      // Starts a full GitHub Actions scrape run (all users); it resets and updates the queue rows itself.
+      const { error } = await supabase.rpc("dispatch_scrape");
       if (error) { alert(`Retry failed: ${error.message}`); return; }
-      if (runDate) {
-        await supabase.from("scrape_queue")
-          .update({ status: "pending", error: null, started_at: null, finished_at: null })
-          .eq("run_date", runDate)
-          .eq("user_id", user.id);
-      }
       onRefresh?.();
     } finally {
       setRetrying(false);

@@ -12,7 +12,17 @@ import {
 } from "./db.mjs";
 import { launchBrowser, newPage, login, scrapePayouts, scrapeEarnings } from "./site.mjs";
 import { captureFailure } from "./debug.mjs";
-import { sendSummary, notifyPhoto } from "./telegram.mjs";
+import { sendSummary, notify, notifyPhoto } from "./telegram.mjs";
+
+// Safety net: alert on any crash the per-user try/catch didn't already handle
+// (e.g. a Supabase outage, Chromium failing to launch, a bug in the loop itself).
+for (const event of ["uncaughtException", "unhandledRejection"]) {
+  process.on(event, async (err) => {
+    console.error(`\nFatal ${event}:`, err);
+    await notify(`🔴 <b>Green Harvest scrape crashed</b> (${event})\n<code>${String(err?.message || err).slice(0, 500)}</code>`);
+    process.exit(1);
+  });
+}
 
 const args = process.argv.slice(2);
 const headless = args.includes("--headless");

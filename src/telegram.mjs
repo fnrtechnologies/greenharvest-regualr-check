@@ -8,7 +8,7 @@ const adminPortalUrl = process.env.ADMIN_PORTAL_URL;
 
 export const telegramEnabled = Boolean(botToken && chatId);
 
-async function send(text) {
+export async function notify(text) {
   if (!telegramEnabled) return false;
   try {
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -132,7 +132,7 @@ export async function sendSummary({ users, monthYear, done, failed, failures }) 
   for (let i = 0; i < chunks.length; i++) {
     const parts = [i === 0 ? header : `<i>(continued ${i + 1}/${chunks.length})</i>`, "", `<pre>${chunks[i].join("\n")}</pre>`];
     if (i === chunks.length - 1) parts.push("", footer);
-    if (!(await send(parts.join("\n")))) return false;
+    if (!(await notify(parts.join("\n")))) return false;
   }
   return true;
 }
